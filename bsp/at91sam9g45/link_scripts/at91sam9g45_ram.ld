@@ -1,6 +1,6 @@
 OUTPUT_FORMAT("elf32-littlearm", "elf32-littlearm", "elf32-littlearm")
 OUTPUT_ARCH(arm)
-ENTRY(system_vectors)
+ENTRY(reset)
 SECTIONS
 {
     . = 0x70000000;
@@ -8,6 +8,7 @@ SECTIONS
     . = ALIGN(4);
     .text : 
     {
+        *(.start)
         *(.vectors)
         *(.text)
         *(.gnu.linkonce.t*)

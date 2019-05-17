@@ -224,7 +224,7 @@ void rt_hw_board_init()
 	rt_hw_console_init();
 
 	/* initialize mmu */
-	rt_hw_mmu_init(at91_mem_desc, sizeof(at91_mem_desc)/sizeof(at91_mem_desc[0]));
+//	rt_hw_mmu_init(at91_mem_desc, sizeof(at91_mem_desc)/sizeof(at91_mem_desc[0]));
 
 	/* initialize hardware interrupt */
 	rt_hw_interrupt_init();

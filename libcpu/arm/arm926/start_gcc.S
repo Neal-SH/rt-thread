@@ -37,7 +37,7 @@
  ***************************************
  */
 .section .vectors
-.code 32
+.arm
 
 .global system_vectors
 system_vectors:
@@ -110,7 +110,7 @@ svc_stack_start:
  * Startup Code 
  ***************************************
  */
-    .section .text
+    .section .start
     .global reset
 reset:
     /* Enter svc mode and mask interrupts */
@@ -119,38 +119,29 @@ reset:
     orr r0, r0, #MODE_SVC|NOINT
     msr cpsr_cxsf, r0
 
-    /* init cpu  */
-    bl  cpu_init_crit
-    
-    /* todo:copyself to link address */
-    
-    /* Copy vector to the correct address */
-    ldr r0, =system_vectors
-    mrc p15, 0, r2, c1, c0, 0
-    ands r2, r2, #(1 << 13)
-    ldreq r1, =0x00000000
-    ldrne r1, =0xffff0000
-    ldmia r0!, {r2-r8, r10}
-    stmia r1!, {r2-r8, r10}
-    ldmia r0!, {r2-r8, r10}
-    stmia r1!, {r2-r8, r10}
 
-    /* turn off the watchdog */
-    ldr r0, =0x01C20CB8
-    mov     r1, #0x0
-    str     r1, [r0]
-
-    /* mask all IRQs source */
-    ldr r1, =0xffffffff
-    ldr r0, =0x01C20430
-    str r1, [r0], #0x04
-    str r1, [r0]
+    @; Set CO-Processor
+    @; little-end, disbale I/D Cache MMU, vector table is 0x00000000
+    MRC     P15, 0, R0, C1, C0, 0   @; Read CP15
+    LDR     R1, =0x00003085         @; set clear bits
+    BIC     R0, R0, R1
+    MCR     P15, 0, R0, C1, C0, 0   @; Write CP15
     
+
     /* Call low level init function */
     ldr     sp, =svc_stack_start
     ldr     r0, =rt_low_level_init
     blx     r0
-    
+
+    /* 内部内存映射到0x00000000 */
+    @; Copy Exception Vectors to Internal RAM
+    LDR     R8, =system_vectors              @; Source
+    LDR     R9, =0x00000000         @; Destination
+    LDMIA   R8!, {R0-R7}            @; Load Vectors
+    STMIA   R9!, {R0-R7}            @; Store Vectors
+    LDMIA   R8!, {R0-R7}            @; Load Handler Addresses
+    STMIA   R9!, {R0-R7}            @; Store Handler Addresses
+
     /* init stack */
     bl stack_setup
     
@@ -185,23 +176,6 @@ ctor_end:
 _rtthread_startup:
     .word  rtthread_startup
 
-
-
-cpu_init_crit:
-    /* invalidate I/D caches */
-    mov r0, #0
-    mcr p15, 0, r0, c7, c7, 0
-    mcr p15, 0, r0, c8, c7, 0
-
-    /* disable MMU stuff and caches */
-    mrc p15, 0, r0, c1, c0, 0
-    bic r0, r0, #0x00002300
-    bic r0, r0, #0x00000087
-    orr r0, r0, #0x00000002
-    orr r0, r0, #0x00001000
-    mcr p15, 0, r0, c1, c0, 0
-
-    bx lr
  
 stack_setup:
     /* Setup Stack for each mode */
